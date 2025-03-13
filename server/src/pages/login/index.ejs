@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Login</title>
+
+	<style>
+		form:not([hidden]) {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			font-family: 'quicksand', sans-serif;
+			gap: 10px;
+		}
+
+		form input:is([type="text"], [type="password"], [type="email"]) {
+			width: 300px;
+			height: 40px;
+			padding: 0 10px;
+			border: 1px solid #ccc;
+			border-radius: 5px;
+		}
+
+		form input[type="submit"] {
+			width: 300px;
+			height: 40px;
+			background-color: #007bff;
+			color: white;
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+		}
+
+		form a {
+			color: #007bff;
+			text-decoration: none;
+		}
+
+		form a:hover {
+			text-decoration: underline;
+		}
+
+		form a:active {
+			color: #0056b3;
+		}
+	</style>
+</head>
+<body>
+	<form id="login-form" action="http://localhost:3000/login" method="POST">
+		<h1>Login</h1>
+		<input type="text" name="username" placeholder="Username" autofocus required>
+		<input type="password" name="password" placeholder="Password" required>
+		<input type="submit" value="Submit">
+		<a href="#" onclick="toggleForm()">Don't have an account? Register</a>
+	</form>
+
+	<form id="register-form" action="http://localhost:3000/register" method="POST" hidden>
+		<h1>Register</h1>
+		<input type="text" name="username" placeholder="Username" autofocus required>
+		<input type="email" name="email" placeholder="Email" required>
+		<input type="password" name="password" placeholder="Password" required>
+		<input type="password" name="confirmPassword" placeholder="Confirm Password" required>
+		<input type="submit" value="Submit">
+		<a href="#" onclick="toggleForm()">Already have an account? Login</a>
+	</form>
+
+	<script>
+		function toggleForm() {
+			const loginForm = document.getElementById('login-form');
+			const registerForm = document.getElementById('register-form');
+
+			if (loginForm.hasAttribute('hidden')) {
+				loginForm.removeAttribute('hidden');
+				registerForm.setAttribute('hidden', '');
+			} else {
+				loginForm.setAttribute('hidden', '');
+				registerForm.removeAttribute('hidden');
+			}
+		}
+	</script>
+</body>
+</html>
