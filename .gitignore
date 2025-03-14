@@ -40,4 +40,4 @@ jspm_packages/
 # Windows files
 Thumbs.db
 
-*.BACKUP
+*.BACKUP*
