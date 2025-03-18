@@ -1,10 +1,10 @@
-import mongoose, { Schema, Document, ObjectId } from "mongoose"
-import { Response, response } from "../lib/response"
-import bcrypt from "bcrypt"
+import mongoose, { Schema, Document, ObjectId } from 'mongoose'
+import { Response, response } from '../lib/response'
+import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { Request, Response as expResponse, NextFunction } from 'express'
 
-const SECRET_KEY = process.env.JWT_SECRET as string
+const SECRET_KEY = (process.env.JWT_SECRET as string) || 'default'
 const EXPIRATION_TIME = process.env.JWT_EXPIRATION ? parseInt(process.env.JWT_EXPIRATION) : '1h'
 
 export interface IUser extends Document {
@@ -12,12 +12,6 @@ export interface IUser extends Document {
 	username: string
 	email: string
 	hash: string // hashed password
-	sessionLog: {
-		id: ObjectId
-		ipAddress: string
-		loginTimestamp: Date
-		logoutTimestamp: Date | null
-	}[]
 	updatedLog: {
 		timestamp: Date
 		notes: string
@@ -33,21 +27,19 @@ const userSchema: Schema = new Schema({
 	username: { type: String, required: true, unique: true },
 	email: { type: String, required: true, unique: true },
 	hash: { type: String, required: true },
-	sessionLog: [{
-		id: { type: Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
-		ipAddress: { type: String, required: true },
-		loginTimestamp: { type: Date, default: Date.now },
-		logoutTimestamp: { type: Date, default: null }
-	}],
-	updatedLog: [{
-		timestamp: { type: Date, default: Date.now },
-		notes: { type: String, default: '' },
-		changes: [{
-			field: { type: String, required: true },
-			oldValue: { type: String, required: true },
-			newValue: { type: String, required: true }
-		}]
-	}]
+	updatedLog: [
+		{
+			timestamp: { type: Date, default: Date.now },
+			notes: { type: String, default: '' },
+			changes: [
+				{
+					field: { type: String, required: true },
+					oldValue: { type: String },
+					newValue: { type: String, required: true }
+				}
+			]
+		}
+	]
 })
 
 const UserModel = mongoose.model<IUser>('User', userSchema)
@@ -58,22 +50,20 @@ class User {
 	private static EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 	private static MAX_PASSWORD_LENGTH = 60
 	private static MIN_PASSWORD_LENGTH = 8
-	private static SPECIAL_CHARACTERS = " !\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
+	private static SPECIAL_CHARACTERS = ' !"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
 
 	private id: string
 	private username: string
 	private email: string
 	private hash: string
-	private sessionLog: IUser['sessionLog']
 	private updatedLog: IUser['updatedLog']
 	private token: string | null
-	
+
 	private constructor(userModel: IUser) {
 		this.id = userModel._id.toString()
 		this.username = userModel.username
 		this.email = userModel.email
 		this.hash = userModel.hash
-		this.sessionLog = userModel.sessionLog
 		this.updatedLog = userModel.updatedLog
 		this.token = null
 	}
@@ -87,9 +77,6 @@ class User {
 	}
 	getEmail(): string {
 		return this.email
-	}
-	getSessionLog(): IUser['sessionLog'] {
-		return this.sessionLog
 	}
 	getUpdatedLog(): IUser['updatedLog'] {
 		return this.updatedLog
@@ -108,7 +95,7 @@ class User {
 			const userModel = await UserModel.findOne({
 				username: { $regex: `^${username}$`, $options: 'i' }
 			})
-			
+
 			return userModel ? new User(userModel) : null
 		} else {
 			// Fuzzy search
@@ -124,7 +111,7 @@ class User {
 			const userModel = await UserModel.findOne({
 				email: { $regex: `^${email}$`, $options: 'i' }
 			})
-			
+
 			return userModel ? new User(userModel) : null
 		} else {
 			// Fuzzy search
@@ -133,12 +120,6 @@ class User {
 			})
 			return userModels.length ? new User(userModels[0]) : null
 		}
-	}
-	static async findBySessionId(sessionId: string): Promise<User | null> {
-		const userModel = await UserModel.findOne({
-			sessionLog: { $elemMatch: { id: sessionId } }
-		})
-		return userModel ? new User(userModel) : null
 	}
 
 	static async checkUsername(username: string, ignoreId?: string): Promise<Response> {
@@ -156,7 +137,7 @@ class User {
 			return response(202, code, false, `Username must be at most ${User.MAX_USERNAME_LENGTH} characters long`, username)
 		}
 
-		if (!/^[a-zA-Z0-9\_]+$/.test(username)) {
+		if (!/^[a-zA-Z0-9_]+$/.test(username)) {
 			return response(203, code, false, 'Username can only contain letters, numbers, and underscores', username)
 		}
 
@@ -169,7 +150,7 @@ class User {
 		}
 
 		// Check if username is unique.
-		const existingUser = await UserModel.findOne({ 
+		const existingUser = await UserModel.findOne({
 			username: { $regex: `^${username}$`, $options: 'i' },
 			_id: { $ne: ignoreId }
 		})
@@ -191,7 +172,7 @@ class User {
 		}
 
 		// Check if email is unique.
-		const existingUser = await UserModel.findOne({ 
+		const existingUser = await UserModel.findOne({
 			email: { $regex: `^${email}$`, $options: 'i' },
 			_id: { $ne: ignoreId }
 		})
@@ -207,7 +188,7 @@ class User {
 		if (!password) {
 			return response(200, code, false, 'No password provided')
 		}
-		
+
 		if (getAllErrors) {
 			const length = password.length >= User.MIN_PASSWORD_LENGTH && password.length <= User.MAX_PASSWORD_LENGTH
 			const hasLowercase = /[a-z]/.test(password)
@@ -220,7 +201,10 @@ class User {
 				hasLowercase: [hasLowercase, 'Password must contain at least one lowercase letter'],
 				hasUppercase: [hasUppercase, 'Password must contain at least one uppercase letter'],
 				hasNumber: [hasNumber, 'Password must contain at least one number'],
-				hasSpecialCharacter: [hasSpecialCharacter, `Password must contain at least one special character (${User.SPECIAL_CHARACTERS})`]
+				hasSpecialCharacter: [
+					hasSpecialCharacter,
+					`Password must contain at least one special character (${User.SPECIAL_CHARACTERS})`
+				]
 			}
 
 			const passed = Object.values(requirements).every(([isValid]) => isValid)
@@ -278,24 +262,29 @@ class User {
 			username,
 			email,
 			hash,
-			sessionLog: [],
-			updatedLog: [{
-				timestamp: new Date(),
-				notes: 'user created',
-				changes: [{
-					field: 'username',
-					oldValue: undefined,
-					newValue: username
-				}, {
-					field: 'email',
-					oldValue: undefined,
-					newValue: email
-				}, {
-					field: 'hash',
-					oldValue: undefined,
-					newValue: hash
-				}]
-			}]
+			updatedLog: [
+				{
+					timestamp: new Date(),
+					notes: 'user created',
+					changes: [
+						{
+							field: 'username',
+							oldValue: undefined,
+							newValue: username
+						},
+						{
+							field: 'email',
+							oldValue: undefined,
+							newValue: email
+						},
+						{
+							field: 'hash',
+							oldValue: undefined,
+							newValue: hash
+						}
+					]
+				}
+			]
 		})
 
 		await userModel.save()
@@ -304,12 +293,16 @@ class User {
 		const user = new User(userModel)
 		return response(100, code, true, 'User created successfully', user)
 	}
-	
-	static async update(id: string, params: {
-		username?: string
-		email?: string
-		password?: string
-	}, notes?: string): Promise<Response> {
+
+	static async update(
+		id: string,
+		params: {
+			username?: string
+			email?: string
+			password?: string
+		},
+		notes?: string
+	): Promise<Response> {
 		const code = 'user-update'
 
 		const userModel = await UserModel.findById(id)
@@ -359,7 +352,7 @@ class User {
 
 		await userModel.save()
 		if (!userModel) return response(203, code, false, 'Failed to update user', id)
-			
+
 		return response(100, code, true, 'User updated successfully', userModel)
 	}
 
@@ -384,11 +377,8 @@ class User {
 		}
 
 		// Find a user by username or email, case-insensitive
-		const userModel = await UserModel.findOne({ 
-			$or: [
-				{ username: { $regex: new RegExp(`^${credentials}$`, 'i') } }, 
-				{ email: { $regex: new RegExp(`^${credentials}$`, 'i') } }
-			] 
+		const userModel = await UserModel.findOne({
+			$or: [{ username: { $regex: new RegExp(`^${credentials}$`, 'i') } }, { email: { $regex: new RegExp(`^${credentials}$`, 'i') } }]
 		})
 		if (!userModel) {
 			return response(202, code, false, 'User not found', credentials)
@@ -398,16 +388,6 @@ class User {
 		if (!bcrypt.compareSync(password, userModel.hash)) {
 			return response(203, code, false, 'Invalid password')
 		}
-
-		// Update session log
-		const sessionLog = {
-			id: new mongoose.Types.ObjectId(),
-			ipAddress,
-			loginTimestamp: new Date(),
-			logoutTimestamp: null
-		} as unknown as IUser['sessionLog'][0]
-
-		userModel.sessionLog.push(sessionLog)
 		await userModel.save()
 
 		const user = new User(userModel)
@@ -420,39 +400,18 @@ class User {
 		return response(100, code, true, 'Login successful', user)
 	}
 
-	static async logout(userId: string, sessionId: string): Promise<Response> {
+	static async logout(userId: string): Promise<Response> {
 		const code = 'user-logout'
 
 		const userModel = await UserModel.findById(userId)
-		if (!userModel) return response(200, code, false, 'User not found', userId)
-
-		const sessionIndex = userModel.sessionLog.findIndex(session => session.id.toString() === sessionId)
-		if (sessionIndex === -1) return response(201, code, false, 'Session not found', sessionId)
-
-		userModel.sessionLog[sessionIndex].logoutTimestamp = new Date()
-		await userModel.save()
-
-		return response(100, code, true, 'Logout successful')
-	}
-
-	static async logoutAll(userId: string): Promise<Response> {
-		const code = 'user-logout-all'
-
-		const userModel = await UserModel.findById(userId)
-		if (!userModel) return response(200, code, false, 'User not found', userId)
-
-		userModel.sessionLog.forEach(session => {
-			session.logoutTimestamp = new Date()
-		})
-		await userModel.save()
-		return response(100, code, true, 'All sessions logged out successfully')
+		return userModel ? response(100, code, true, 'Logout successful') : response(200, code, false, 'User not found', userId)
 	}
 
 	private static generateToken(userId: string): string {
 		return jwt.sign({ userId }, SECRET_KEY, { expiresIn: EXPIRATION_TIME })
 	}
 
-	private static verifyToken(token: string): any {
+	private static verifyToken(token: string) {
 		try {
 			return jwt.verify(token, SECRET_KEY)
 		} catch (error) {
@@ -460,35 +419,77 @@ class User {
 		}
 	}
 
-	static authenticate(req: Request, res: expResponse, next: NextFunction) {
-		const token = req.headers.authorization?.split(' ')[1]
-		
+	/** Middleware for routes that require authentication. If the user is not authenticated, it will redirect them to the login page. */
+	static async authenticate(req: Request, res: expResponse, next: NextFunction) {
+		const token = req.cookies.token || req.headers.authorization?.split(' ')[1] || null
+		req.body.user = null
+
 		if (!token) {
 			return res.status(401).redirect('/login')
 		}
-	
+
 		const decoded = User.verifyToken(token)
 		if (!decoded) {
 			return res.status(401).redirect('/login')
 		}
-	
-		req.body.userId = decoded.userId
+
+		// Find the user by ID
+		const userId = typeof decoded === 'string' ? decoded : decoded.userId
+		const user = await User.findById(userId)
+
+		req.body.user = user
 		next()
 	}
 
-	async update(params: {
-		username?: string
-		email?: string
-		password?: string
-	}, notes?: string): Promise<Response> {
+	/** Middleware explicitly for routes that require you to be logged out. If you are logged in, it will redirect you to the home page. */
+	static async dontAuthenticate(req: Request, res: expResponse, next: NextFunction) {
+		const token = req.cookies.token || req.headers.authorization?.split(' ')[1] || null
+		req.body.user = null
+
+		if (!token) {
+			return next()
+		}
+
+		const decoded = User.verifyToken(token)
+		if (!decoded) {
+			return next()
+		}
+		return res.status(401).redirect('/')
+	}
+
+	/** Middleware that provides the user information if available, but returns null for the user if not available. No redirects. */
+	static async getUserInfo(req: Request, res: expResponse, next: NextFunction) {
+		const token = req.cookies.token || req.headers.authorization?.split(' ')[1] || null
+		req.body.user = null
+		if (!token) {
+			return next()
+		}
+		const decoded = User.verifyToken(token)
+		if (!decoded) {
+			return next()
+		}
+		// Find the user by ID
+		const userId = typeof decoded === 'string' ? decoded : decoded.userId
+		const user = await User.findById(userId)
+		req.body.user = user
+		next()
+	}
+
+	async update(
+		params: {
+			username?: string
+			email?: string
+			password?: string
+		},
+		notes?: string
+	): Promise<Response> {
 		const response = await User.update(this.id, params, notes)
-		
+
 		if (response.passed) {
 			const userModel = response.data as IUser
 			this.username = userModel.username
 			this.email = userModel.email
 			this.hash = userModel.hash
-			this.sessionLog = userModel.sessionLog
 			this.updatedLog = userModel.updatedLog
 		}
 
@@ -497,39 +498,22 @@ class User {
 
 	async delete(): Promise<Response> {
 		const response = await User.delete(this.id)
-		
+
 		if (response.passed) {
 			this.id = ''
 			this.username = ''
 			this.email = ''
 			this.hash = ''
-			this.sessionLog = []
 			this.updatedLog = []
 		}
 
 		return response
 	}
 
-	async logout(sessionId: string): Promise<Response> {
-		const response = await User.logout(this.id, sessionId)
+	async logout(): Promise<Response> {
+		const response = await User.logout(this.id)
 
-		if (response.passed) {
-			const userModel = response.data as IUser
-			this.sessionLog = userModel.sessionLog
-			this.token = null
-		}
-
-		return response
-	}
-
-	async logoutAll(): Promise<Response> {
-		const response = await User.logoutAll(this.id)
-
-		if (response.passed) {
-			const userModel = response.data as IUser
-			this.sessionLog = userModel.sessionLog
-			this.token = null
-		}
+		if (response.passed) this.token = null
 
 		return response
 	}

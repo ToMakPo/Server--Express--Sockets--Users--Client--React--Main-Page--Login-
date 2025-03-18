@@ -28,11 +28,16 @@ export default [
 					endOfLine: 'auto',
 					useTabs: true,
 					tabWidth: 4,
-					printWidth: 140
+					printWidth: 140,
+					bracketSpacing: true,
+					bracketSameLine: false,
+					arrowParens: 'avoid'
 				}
 			],
-			'no-console': 'warn',
+			'no-console': 'off',
 			'no-unused-vars': 'off',
+			'no-explicit-any': 'off',
+			'@typescript-eslint/no-explicit-any': 'off',
 			'import/no-unresolved': 'off',
 			'import/extensions': 'off',
 			'import/prefer-default-export': 'off'
