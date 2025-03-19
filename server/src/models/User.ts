@@ -1,43 +1,52 @@
 import mongoose, { Schema, Document, ObjectId } from 'mongoose'
-import { Response, response } from '../lib/response'
+import { Response as ApiResponse, response as apiResponse } from '../lib/response'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
-import { Request, Response as expResponse, NextFunction } from 'express'
+import { Request, Response, NextFunction } from 'express'
 
 const SECRET_KEY = (process.env.JWT_SECRET as string) || 'default'
 const EXPIRATION_TIME = process.env.JWT_EXPIRATION ? parseInt(process.env.JWT_EXPIRATION) : '1h'
 
+interface IUserValues {
+	username: string
+	email: string
+	hash: string
+	active: boolean
+}
 export interface IUser extends Document {
 	_id: ObjectId
 	username: string
 	email: string
 	hash: string // hashed password
+	active: boolean
 	updatedLog: {
 		timestamp: Date
 		notes: string
-		changes: {
-			field: string
-			oldValue: string
-			newValue: string
-		}[]
+		changes: Partial<IUserValues>
 	}[]
 }
+
+const userValuesSchema: Schema = new Schema(
+	{
+		username: { type: String },
+		email: { type: String },
+		hash: { type: String },
+		active: { type: Boolean }
+	},
+	{ _id: false }
+)
 
 const userSchema: Schema = new Schema({
 	username: { type: String, required: true, unique: true },
 	email: { type: String, required: true, unique: true },
 	hash: { type: String, required: true },
+	active: { type: Boolean, default: true },
 	updatedLog: [
 		{
 			timestamp: { type: Date, default: Date.now },
 			notes: { type: String, default: '' },
-			changes: [
-				{
-					field: { type: String, required: true },
-					oldValue: { type: String },
-					newValue: { type: String, required: true }
-				}
-			]
+			changes: { type: userValuesSchema, required: true },
+			_id: false
 		}
 	]
 })
@@ -56,6 +65,7 @@ class User {
 	private username: string
 	private email: string
 	private hash: string
+	private active: boolean
 	private updatedLog: IUser['updatedLog']
 	private token: string | null
 
@@ -64,6 +74,7 @@ class User {
 		this.username = userModel.username
 		this.email = userModel.email
 		this.hash = userModel.hash
+		this.active = userModel.active
 		this.updatedLog = userModel.updatedLog
 		this.token = null
 	}
@@ -77,6 +88,9 @@ class User {
 	}
 	getEmail(): string {
 		return this.email
+	}
+	getActive(): boolean {
+		return this.active
 	}
 	getUpdatedLog(): IUser['updatedLog'] {
 		return this.updatedLog
@@ -122,71 +136,72 @@ class User {
 		}
 	}
 
-	static async checkUsername(username: string, ignoreId?: string): Promise<Response> {
+	static async checkUsername(username: string, ignoreId?: string): Promise<ApiResponse> {
 		const code = 'user-check-username'
 
 		if (!username) {
-			return response(200, code, false, 'No username provided', username)
+			return apiResponse(200, code, false, 'No username provided', username)
 		}
 
 		if (username.length < User.MIN_USERNAME_LENGTH) {
-			return response(201, code, false, `Username must be at least ${User.MIN_USERNAME_LENGTH} characters long`, username)
+			return apiResponse(201, code, false, `Username must be at least ${User.MIN_USERNAME_LENGTH} characters long`, username)
 		}
 
 		if (username.length > User.MAX_USERNAME_LENGTH) {
-			return response(202, code, false, `Username must be at most ${User.MAX_USERNAME_LENGTH} characters long`, username)
+			return apiResponse(202, code, false, `Username must be at most ${User.MAX_USERNAME_LENGTH} characters long`, username)
 		}
 
 		if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-			return response(203, code, false, 'Username can only contain letters, numbers, and underscores', username)
+			return apiResponse(203, code, false, 'Username can only contain letters, numbers, and underscores', username)
 		}
 
 		if (username.includes('__')) {
-			return response(204, code, false, 'Username cannot contain consecutive underscores', username)
+			return apiResponse(204, code, false, 'Username cannot contain consecutive underscores', username)
 		}
 
 		if (username.startsWith('_') || username.endsWith('_')) {
-			return response(205, code, false, 'Username cannot start or end with an underscore', username)
+			return apiResponse(205, code, false, 'Username cannot start or end with an underscore', username)
 		}
 
 		// Check if username is unique.
 		const existingUser = await UserModel.findOne({
 			username: { $regex: `^${username}$`, $options: 'i' },
-			_id: { $ne: ignoreId }
+			_id: { $ne: ignoreId }, // Ignore the user with the given ID
+			active: true // Only check requested username against active users
 		})
 		if (existingUser) {
-			return response(206, code, false, 'Username is already taken', username)
+			return apiResponse(206, code, false, 'Username is already taken', username)
 		}
 
-		return response(100, code, true, 'Username is valid', username)
+		return apiResponse(100, code, true, 'Username is valid', username)
 	}
-	static async checkEmail(email: string, ignoreId?: string): Promise<Response> {
+	static async checkEmail(email: string, ignoreId?: string): Promise<ApiResponse> {
 		const code = 'user-check-email'
 
 		if (!email) {
-			return response(200, code, false, 'No email provided', email)
+			return apiResponse(200, code, false, 'No email provided', email)
 		}
 
 		if (!User.EMAIL_REGEX.test(email)) {
-			return response(201, code, false, 'Invalid email format', email)
+			return apiResponse(201, code, false, 'Invalid email format', email)
 		}
 
 		// Check if email is unique.
 		const existingUser = await UserModel.findOne({
 			email: { $regex: `^${email}$`, $options: 'i' },
-			_id: { $ne: ignoreId }
+			_id: { $ne: ignoreId } // Ignore the user with the given ID
 		})
 		if (existingUser) {
-			return response(202, code, false, 'Email is already registered', email)
+			return apiResponse(202, code, false, 'Email is already registered', email)
 		}
 
-		return response(100, code, true, 'Email is valid', email)
+		return apiResponse(100, code, true, 'Email is valid', email)
 	}
-	static async checkPassword(password: string, getAllErrors?: boolean): Promise<Response> {
+	static async checkPassword(password: string, getAllErrors?: boolean): Promise<ApiResponse> {
 		const code = 'user-check-password'
 
 		if (!password) {
-			return response(200, code, false, 'No password provided')
+			return apiResponse(200, code, false, 'No password provided')
 		}
 
 		if (getAllErrors) {
@@ -210,38 +225,38 @@ class User {
 			const passed = Object.values(requirements).every(([isValid]) => isValid)
 
 			return passed
-				? response(101, code, true, 'Password is valid', requirements)
-				: response(201, code, false, 'Password does not meet requirements', requirements)
+				? apiResponse(101, code, true, 'Password is valid', requirements)
+				: apiResponse(201, code, false, 'Password does not meet requirements', requirements)
 		}
 
 		if (password.length < User.MIN_PASSWORD_LENGTH) {
-			return response(201, code, false, `Password must be at least ${User.MIN_PASSWORD_LENGTH} characters long`)
+			return apiResponse(201, code, false, `Password must be at least ${User.MIN_PASSWORD_LENGTH} characters long`)
 		}
 
 		if (password.length > User.MAX_PASSWORD_LENGTH) {
-			return response(202, code, false, `Password must be at most ${User.MAX_PASSWORD_LENGTH} characters long`)
+			return apiResponse(202, code, false, `Password must be at most ${User.MAX_PASSWORD_LENGTH} characters long`)
 		}
 
 		if (!/[a-z]/.test(password)) {
-			return response(203, code, false, 'Password must contain at least one lowercase letter')
+			return apiResponse(203, code, false, 'Password must contain at least one lowercase letter')
 		}
 
 		if (!/[A-Z]/.test(password)) {
-			return response(204, code, false, 'Password must contain at least one uppercase letter')
+			return apiResponse(204, code, false, 'Password must contain at least one uppercase letter')
 		}
 
 		if (!/[0-9]/.test(password)) {
-			return response(205, code, false, 'Password must contain at least one number')
+			return apiResponse(205, code, false, 'Password must contain at least one number')
 		}
 
 		if (!new RegExp(`[${User.SPECIAL_CHARACTERS}]`).test(password)) {
-			return response(206, code, false, `Password must contain at least one special character (${User.SPECIAL_CHARACTERS})`)
+			return apiResponse(206, code, false, `Password must contain at least one special character (${User.SPECIAL_CHARACTERS})`)
 		}
 
-		return response(100, code, true, 'Password is valid')
+		return apiResponse(100, code, true, 'Password is valid')
 	}
 
-	static async create(username: string, email: string, password: string): Promise<Response> {
+	static async create(username: string, email: string, password: string): Promise<ApiResponse> {
 		const code = 'user-create'
 
 		const usernameCheck = await User.checkUsername(username)
@@ -255,7 +270,7 @@ class User {
 
 		// Hash the password
 		const hash = await bcrypt.hash(password, 10)
-		if (!hash) return response(200, 'user-create', false, 'Failed to hash password', username)
+		if (!hash) return apiResponse(200, 'user-create', false, 'Failed to hash password', username)
 
 		// Create the user
 		const userModel = new UserModel({
@@ -266,32 +281,21 @@ class User {
 				{
 					timestamp: new Date(),
 					notes: 'user created',
-					changes: [
-						{
-							field: 'username',
-							oldValue: undefined,
-							newValue: username
-						},
-						{
-							field: 'email',
-							oldValue: undefined,
-							newValue: email
-						},
-						{
-							field: 'hash',
-							oldValue: undefined,
-							newValue: hash
-						}
-					]
+					changes: {
+						username,
+						email,
+						hash,
+						active: true
+					}
 				}
 			]
 		})
 
 		await userModel.save()
-		if (!userModel) return response(201, code, false, 'Failed to create user', [username, email])
+		if (!userModel) return apiResponse(201, code, false, 'Failed to create user', [username, email])
 
 		const user = new User(userModel)
-		return response(100, code, true, 'User created successfully', user)
+		return apiResponse(100, code, true, 'User created successfully', user)
 	}
 
 	static async update(
@@ -300,22 +304,23 @@ class User {
 			username?: string
 			email?: string
 			password?: string
+			active?: boolean
 		},
 		notes?: string
-	): Promise<Response> {
+	): Promise<ApiResponse> {
 		const code = 'user-update'
 
 		const userModel = await UserModel.findById(id)
-		if (!userModel) return response(200, code, false, 'User not found', id)
+		if (!userModel) return apiResponse(200, code, false, 'User not found', id)
 
-		const { username, email, password } = params
-		const changes = []
+		const { username, email, password, active } = params
+		const changes = {} as Partial<IUserValues>
 
 		if (username && username !== userModel.username) {
 			const usernameCheck = await User.checkUsername(username, id)
 			if (!usernameCheck.passed) return usernameCheck
 
-			changes.push({ field: 'username', oldValue: userModel.username, newValue: username })
+			changes['username'] = username
 			userModel.username = username
 		}
 
@@ -323,7 +328,7 @@ class User {
 			const emailCheck = await User.checkEmail(email, id)
 			if (!emailCheck.passed) return emailCheck
 
-			changes.push({ field: 'email', oldValue: userModel.email, newValue: email })
+			changes['email'] = email
 			userModel.email = email
 		}
 
@@ -333,14 +338,21 @@ class User {
 
 			// Hash the new password
 			const hash = await bcrypt.hash(password, 10)
-			if (!hash) return response(201, code, false, 'Failed to hash password', id)
+			if (!hash) return apiResponse(201, code, false, 'Failed to hash password', id)
 
-			changes.push({ field: 'hash', oldValue: userModel.hash, newValue: hash })
+			changes['hash'] = hash
 			userModel.hash = hash
 		}
 
-		if (changes.length === 0) {
-			return response(202, code, false, 'No changes made', id)
+		if (active !== undefined) {
+			if (active !== userModel.active) {
+				changes['active'] = active
+				userModel.active = active
+			}
+		}
+
+		if (Object.keys.length === 0) {
+			return apiResponse(202, code, false, 'No changes made', id)
 		}
 
 		// Update the updatedLog
@@ -351,60 +363,61 @@ class User {
 		})
 
 		await userModel.save()
-		if (!userModel) return response(203, code, false, 'Failed to update user', id)
+		if (!userModel) return apiResponse(203, code, false, 'Failed to update user', id)
 
-		return response(100, code, true, 'User updated successfully', userModel)
+		return apiResponse(100, code, true, 'User updated successfully', userModel)
 	}
 
-	static async delete(id: string): Promise<Response> {
+	static async delete(id: string): Promise<ApiResponse> {
 		const code = 'user-delete'
 
 		const userModel = await UserModel.findByIdAndDelete(id)
-		if (!userModel) return response(200, code, false, 'User not found', id)
+		if (!userModel) return apiResponse(200, code, false, 'User not found', id)
 
-		return response(100, code, true, 'User deleted successfully', userModel)
+		return apiResponse(100, code, true, 'User deleted successfully', userModel)
 	}
 
-	static async login(credentials: string, password: string, ipAddress: string): Promise<Response> {
+	static async login(credentials: string, password: string, ipAddress: string): Promise<ApiResponse> {
 		const code = 'user-login'
 
 		if (!credentials) {
-			return response(200, code, false, 'No username or email provided', credentials)
+			return apiResponse(200, code, false, 'No username or email provided', credentials)
 		}
 
 		if (!password) {
-			return response(201, code, false, 'No password provided')
+			return apiResponse(201, code, false, 'No password provided')
 		}
 
 		// Find a user by username or email, case-insensitive
 		const userModel = await UserModel.findOne({
+			active: true,
 			$or: [{ username: { $regex: new RegExp(`^${credentials}$`, 'i') } }, { email: { $regex: new RegExp(`^${credentials}$`, 'i') } }]
 		})
 		if (!userModel) {
-			return response(202, code, false, 'User not found', credentials)
+			return apiResponse(202, code, false, 'User not found', credentials)
 		}
 
 		// Check if password is correct
 		if (!bcrypt.compareSync(password, userModel.hash)) {
-			return response(203, code, false, 'Invalid password')
+			return apiResponse(203, code, false, 'Invalid password')
 		}
 		await userModel.save()
 
 		const user = new User(userModel)
 
 		const token = User.generateToken(user.getId())
-		if (!token) return response(204, code, false, 'Failed to generate token', user.getId())
+		if (!token) return apiResponse(204, code, false, 'Failed to generate token', user.getId())
 
 		user.token = token
 
-		return response(100, code, true, 'Login successful', user)
+		return apiResponse(100, code, true, 'Login successful', user)
 	}
 
-	static async logout(userId: string): Promise<Response> {
+	static async logout(userId: string): Promise<ApiResponse> {
 		const code = 'user-logout'
 
 		const userModel = await UserModel.findById(userId)
-		return userModel ? response(100, code, true, 'Logout successful') : response(200, code, false, 'User not found', userId)
+		return userModel ? apiResponse(100, code, true, 'Logout successful') : apiResponse(200, code, false, 'User not found', userId)
 	}
 
 	private static generateToken(userId: string): string {
@@ -419,9 +432,24 @@ class User {
 		}
 	}
 
+	static getToken(req: Request): string | null {
+		return req.cookies.token || req.headers.authorization?.split(' ')[1] || null
+	}
+	/**
+	 * Get the time left on the token in seconds.
+	 *
+	 * @param token The token to get the time left on.
+	 * @returns The time left on the token in seconds.
+	 */
+	static getTokenTimeLeft(token: string): number {
+		const decoded = jwt.decode(token) as { exp: number }
+		if (!decoded || !decoded.exp) return 0
+		return decoded.exp - Math.floor(Date.now() / 1000)
+	}
+
 	/** Middleware for routes that require authentication. If the user is not authenticated, it will redirect them to the login page. */
-	static async authenticate(req: Request, res: expResponse, next: NextFunction) {
-		const token = req.cookies.token || req.headers.authorization?.split(' ')[1] || null
+	static async authenticate(req: Request, res: Response, next: NextFunction) {
+		const token = User.getToken(req)
 		req.body.user = null
 
 		if (!token) {
@@ -441,33 +469,15 @@ class User {
 		next()
 	}
 
-	/** Middleware explicitly for routes that require you to be logged out. If you are logged in, it will redirect you to the home page. */
-	static async dontAuthenticate(req: Request, res: expResponse, next: NextFunction) {
-		const token = req.cookies.token || req.headers.authorization?.split(' ')[1] || null
-		req.body.user = null
-
-		if (!token) {
-			return next()
-		}
-
-		const decoded = User.verifyToken(token)
-		if (!decoded) {
-			return next()
-		}
-		return res.status(401).redirect('/')
-	}
-
 	/** Middleware that provides the user information if available, but returns null for the user if not available. No redirects. */
-	static async getUserInfo(req: Request, res: expResponse, next: NextFunction) {
-		const token = req.cookies.token || req.headers.authorization?.split(' ')[1] || null
+	static async getUserInfo(req: Request, res: Response, next: NextFunction) {
 		req.body.user = null
-		if (!token) {
-			return next()
-		}
+
+		const token = User.getToken(req)
+		if (!token) return next()
 		const decoded = User.verifyToken(token)
-		if (!decoded) {
-			return next()
-		}
+		if (!decoded) return next()
+
 		// Find the user by ID
 		const userId = typeof decoded === 'string' ? decoded : decoded.userId
 		const user = await User.findById(userId)
@@ -480,9 +490,10 @@ class User {
 			username?: string
 			email?: string
 			password?: string
+			active?: boolean
 		},
 		notes?: string
-	): Promise<Response> {
+	): Promise<ApiResponse> {
 		const response = await User.update(this.id, params, notes)
 
 		if (response.passed) {
@@ -490,27 +501,36 @@ class User {
 			this.username = userModel.username
 			this.email = userModel.email
 			this.hash = userModel.hash
+			this.active = userModel.active
 			this.updatedLog = userModel.updatedLog
 		}
 
 		return response
 	}
 
-	async delete(): Promise<Response> {
+	async delete(force?: boolean): Promise<ApiResponse> {
+		// TODO: Check if the user is being referenced by any other documents.
+		// if (!force) {
+		// 	const code = 'user-delete'
+
+		// 	// If the deletion is being forced, then delete the user. Otherwise, check if the user is being referenced by any other
+		// 	// documents. If they are, then instead of deleting the user, just set their active status to false.
+		// 	let userReferenced = false
+
+		// 	if (userReferenced) return await this.update({ active: false }, 'User deleted')
+		// }
+
 		const response = await User.delete(this.id)
 
 		if (response.passed) {
-			this.id = ''
-			this.username = ''
-			this.email = ''
-			this.hash = ''
-			this.updatedLog = []
+			this.active = false
+			this.token = null
 		}
 
 		return response
 	}
 
-	async logout(): Promise<Response> {
+	async logout(): Promise<ApiResponse> {
 		const response = await User.logout(this.id)
 
 		if (response.passed) this.token = null

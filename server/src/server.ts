@@ -17,6 +17,7 @@ app.disable('x-powered-by')
 	.use(express.json())
 	.use(cors())
 	.use(cookieParser())
+	.use(express.static('public'))
 
 // Connect to the database
 const connectToDatabase = async () => {
@@ -41,8 +42,8 @@ app.get('/', User.getUserInfo, (req: Request, res: Response) => {
 	res.render('home/HomePage', { title: 'Home Page', user })
 })
 
-app.get('/login', User.dontAuthenticate, (req: Request, res: Response) => {
-	res.render('login/LoginPage')
+app.get('/login', User.getUserInfo, (req: Request, res: Response) => {
+	return req.body.user ? res.redirect('/') : res.render('login/LoginPage')
 })
 
 app.get('/test', User.authenticate, (req: Request, res: Response) => {
