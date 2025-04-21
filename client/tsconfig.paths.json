@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"baseUrl": "src",
+		"paths": {
+			"@components/*": [
+				"components/*"
+			],
+			"@styles/*": [
+				"styles/*"
+			]
+		},
+		"forceConsistentCasingInFileNames": true,
+		"strict": true
+	}
+}
