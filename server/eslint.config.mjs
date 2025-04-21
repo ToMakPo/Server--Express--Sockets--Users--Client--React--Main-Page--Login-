@@ -1,8 +1,8 @@
 import globals from 'globals'
 import pluginJs from '@eslint/js'
 import tseslint from 'typescript-eslint'
-import jest from 'eslint-plugin-jest'
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
+import jest, { rules } from 'eslint-plugin-jest'
+import eslintPluginPrettierRecommended, { plugins } from 'eslint-plugin-prettier/recommended'
 
 export default [
 	{ ignores: ['dist/'] },
@@ -15,6 +15,26 @@ export default [
 		files: ['src/tests/**/*.{js,ts}'],
 		...jest.configs['flat/recommended'],
 		rules: { ...jest.configs['flat/recommended'].rules, 'jest/prefer-expect-assertions': 'off' }
+	},
+	{
+		files: ['public/scripts/**/*.js'],
+		languageOptions: {
+			ecmaVersion: 'latest',
+			sourceType: 'module',
+			globals: globals.browser
+		},
+		rules: {
+			singleQuote: true,
+			semi: false,
+			trailingComma: 'none',
+			endOfLine: 'auto',
+			useTabs: true,
+			tabWidth: 4,
+			printWidth: 140,
+			bracketSpacing: true,
+			bracketSameLine: false,
+			arrowParens: 'avoid'
+		}
 	},
 	{
 		rules: {
@@ -40,7 +60,7 @@ export default [
 			'@typescript-eslint/no-explicit-any': 'off',
 			'import/no-unresolved': 'off',
 			'import/extensions': 'off',
-			'import/prefer-default-export': 'off'
+			'import/prefer-default-export': 'off',
 		}
 	},
 	eslintPluginPrettierRecommended

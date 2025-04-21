@@ -18,7 +18,7 @@ This project provides a starter template for building a web application with the
 - SASS
 
 ## INSTRUCTIONS ##
-<input type="checkbox"> Update Server [.env](./server/.env) file
+<input type='checkbox'> Update Server [.env](./server/.env) file
 1. Clone the repository:
    ```
    git clone <repository-url>
