@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import User, { IUserUpdateProps } from '../models/User'
+import User, { IUserUpdateParams } from '../models/User'
 import { response as apiResponse } from '../lib/response'
 
 const userRouter = Router()
@@ -61,14 +61,14 @@ userRouter.put('/update', User.getInfo, async (req, res) => {
 	const password = (req.body.password as string | undefined) || ''
 	const notes = (req.body.notes as string | undefined) || 'Updated user'
 
-	const props: Partial<IUserUpdateProps> = {}
+	const params = {} as IUserUpdateParams
 
-	if (newUsername !== undefined && newUsername !== user.getUsername()) props.username = newUsername
-	if (newEmail !== undefined && newEmail !== user.getEmail()) props.email = newEmail
-	if (newPassword !== undefined) props.password = newPassword
-	if (newConfirm !== undefined) props.confirm = newConfirm
+	if (newUsername !== undefined && newUsername !== user.getUsername()) params.username = newUsername
+	if (newEmail !== undefined && newEmail !== user.getEmail()) params.email = newEmail
+	if (newPassword !== undefined) params.password = newPassword
+	if (newConfirm !== undefined) params.confirm = newConfirm
 
-	const requirePassword = ['username', 'email', 'password'].some(key => key in props)
+	const requirePassword = ['username', 'email', 'password'].some(key => key in params)
 
 	// Validate the current password before updating the user
 	if (requirePassword && (!password || !user.confirmPassword(password))) {
@@ -78,7 +78,7 @@ userRouter.put('/update', User.getInfo, async (req, res) => {
 		return
 	}
 
-	const response = await User.update(id, props, notes)
+	const response = await User.update(id, params, notes)
 
 	res.json(response)
 })

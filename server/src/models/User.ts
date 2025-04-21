@@ -5,24 +5,30 @@ import jwt from 'jsonwebtoken'
 import { Request, Response, NextFunction } from 'express'
 import { SignOptions } from 'jsonwebtoken'
 
+const USER_REQUIERMENTS = {
+	minLength: 3, // username must be at least n characters long; null means no limit
+	maxLength: 25, // username must be at most n characters long; null means no limit
+	maxUpdateFrequency: null // username must be updated at most once every n days; null means no limit
+}
+const EMAIL_REQUIERMENTS = {
+	regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+}
+const PASSWORD_REQUIREMENTS = {
+	minLength: 8, // password must be at least n characters long; null means no limit
+	maxLength: 60, // password must be at most n characters long; null means no limit
+	lowercase: true, // password must contain at least one lowercase letter
+	uppercase: true, // password must contain at least one uppercase letter
+	number: true, // password must contain at least one number
+	specialCharacter: true, // password must contain at least one special character,
+	characters: ' !"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~',
+	minUpdateFrequency: 90 // password must be updated at most once every n days; null means no limit
+}
 const SECRET_KEY = process.env.JWT_SECRET || 'default'
 const EXPIRATION_TIME = (process.env.JWT_EXPIRATION as SignOptions['expiresIn']) || '1h'
 
-interface IUserValues {
-	username: string
-	email: string
-	hash: string
-	active: boolean
-}
-export interface IUserUpdateProps {
-	username?: string
-	email?: string
-	password?: string
-	confirm?: string
-	active?: boolean
-}
-interface IUser extends Document {
-	_id: ObjectId
+/** The user model interface. */
+export interface IUser {
+	id: string
 	username: string
 	email: string
 	hash: string // hashed password
@@ -30,21 +36,23 @@ interface IUser extends Document {
 	updateLog: {
 		timestamp: Date
 		notes: string
-		changes: Partial<IUserValues>
+		changes: IUserUpdate
 	}[]
 }
 
-const userValuesSchema: Schema = new Schema(
-	{
-		username: { type: String },
-		email: { type: String },
-		hash: { type: String },
-		active: { type: Boolean }
-	},
-	{ _id: false }
-)
+/** The user model interface that can be sent to the client. */
+export interface IUserValues extends Omit<IUser, 'hash' | 'updateLog'> {}
+/** The user model interface that stores the changes made to the user. */
+export interface IUserUpdate extends Partial<Omit<IUser, 'id' | 'updateLog'>> {}
+/** The user model interface that can be used to update the user. */
+export interface IUserUpdateParams extends Omit<IUserUpdate, 'hash'> {
+	password?: string
+	confirm?: string
+}
 
+/** The user schema. */
 const userSchema: Schema = new Schema({
+	id: { type: Schema.Types.ObjectId, auto: true },
 	username: { type: String, required: true, unique: true },
 	email: { type: String, required: true, unique: true },
 	hash: { type: String, required: true },
@@ -53,37 +61,27 @@ const userSchema: Schema = new Schema({
 		{
 			timestamp: { type: Date, default: Date.now },
 			notes: { type: String, default: '' },
-			changes: { type: userValuesSchema, required: true },
+			changes: { 
+				type: {
+					username: { type: String },
+					email: { type: String },
+					hash: { type: String },
+					active: { type: Boolean }
+				},
+				required: true
+			},
 			_id: false
 		}
 	]
-})
+}, { id: true, _id: false }) as unknown as Schema<IUser>
 
-const UserModel = mongoose.model<IUser>('User', userSchema)
+/** The user model. */
+const UserModel = mongoose.model<IUser>('User', userSchema) 
 
 /**
  * A class representing a user profile.
  */
 class User {
-	private static USER_REQUIERMENTS = {
-		minLength: 3, // username must be at least n characters long; null means no limit
-		maxLength: 25, // username must be at most n characters long; null means no limit
-		maxUpdateFrequency: null // username must be updated at most once every n days; null means no limit
-	}
-	private static EMAIL_REQUIERMENTS = {
-		regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-	}
-	private static PASSWORD_REQUIREMENTS = {
-		minLength: 8, // password must be at least n characters long; null means no limit
-		maxLength: 60, // password must be at most n characters long; null means no limit
-		lowercase: true, // password must contain at least one lowercase letter
-		uppercase: true, // password must contain at least one uppercase letter
-		number: true, // password must contain at least one number
-		specialCharacter: true, // password must contain at least one special character,
-		characters: ' !"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~',
-		minUpdateFrequency: 90 // password must be updated at most once every n days; null means no limit
-	}
-
 	private id: string
 	private username: string
 	private email: string
@@ -91,13 +89,13 @@ class User {
 	private active: boolean
 	private updateLog: IUser['updateLog']
 
-	private constructor(userModel: IUser) {
-		this.id = userModel._id.toString()
-		this.username = userModel.username
-		this.email = userModel.email
-		this.hash = userModel.hash
-		this.active = userModel.active
-		this.updateLog = userModel.updateLog
+	private constructor(user: IUser) {
+		this.id = user.id.toString()
+		this.username = user.username
+		this.email = user.email
+		this.hash = user.hash
+		this.active = user.active
+		this.updateLog = user.updateLog
 	}
 
 	/**
@@ -146,15 +144,29 @@ class User {
 
 	/**
 	 * Get the user information that can be sent to the client.
+	 * 
+	 * @returns The user data.
 	 */
-	getData(): Partial<IUserValues> {
+	getValues(): IUserValues {
 		return {
+			id: this.id,
 			username: this.username,
 			email: this.email,
 			active: this.active
 		}
 	}
 
+	/**
+	 * Set the user information.
+	 *
+	 * @param params The user information to set.
+	 * - username: The new username.
+	 * - email: The new email.
+	 * - hash: The new hashed password.
+	 * - active: The new active status.
+	 * - updateLog: The new update log.
+	 * @returns The updated user instance.
+	 */
 	setValues(params: Partial<IUser>) {
 		if (params.username !== undefined) this.username = params.username
 		if (params.email !== undefined) this.email = params.email
@@ -177,7 +189,7 @@ class User {
 	 * @param notes The notes to add to the updateLog.
 	 * @returns The response from the API.
 	 */
-	async update(params: Partial<IUserUpdateProps>, notes?: string): Promise<ApiResponse> {
+	async update(params: IUserUpdateParams, notes?: string): Promise<ApiResponse> {
 		const response = await User.update(this.id, params, notes)
 
 		if (response.passed) {
@@ -283,7 +295,7 @@ class User {
 	 * @returns The user data.
 	 */
 	static getData(user: User | Partial<IUser>): Partial<IUserValues> {
-		if (user instanceof User) return user.getData()
+		if (user instanceof User) return user.getValues()
 		return {
 			username: user.username,
 			email: user.email,
@@ -305,13 +317,13 @@ class User {
 			return apiResponse(200, code, false, 'No username provided', username, 'username')
 		}
 
-		if (User.USER_REQUIERMENTS.minLength && username.length < User.USER_REQUIERMENTS.minLength) {
-			const msg = `Username must be at least ${User.USER_REQUIERMENTS.minLength} characters long`
+		if (USER_REQUIERMENTS.minLength && username.length < USER_REQUIERMENTS.minLength) {
+			const msg = `Username must be at least ${USER_REQUIERMENTS.minLength} characters long`
 			return apiResponse(201, code, false, msg, username, 'username')
 		}
 
-		if (User.USER_REQUIERMENTS.maxLength && username.length > User.USER_REQUIERMENTS.maxLength) {
-			const msg = `Username must be at most ${User.USER_REQUIERMENTS.maxLength} characters long`
+		if (USER_REQUIERMENTS.maxLength && username.length > USER_REQUIERMENTS.maxLength) {
+			const msg = `Username must be at most ${USER_REQUIERMENTS.maxLength} characters long`
 			return apiResponse(202, code, false, msg, username, 'username')
 		}
 
@@ -357,7 +369,7 @@ class User {
 			return apiResponse(200, code, false, 'No email provided', email, 'email')
 		}
 
-		if (!User.EMAIL_REQUIERMENTS.regex.test(email)) {
+		if (!EMAIL_REQUIERMENTS.regex.test(email)) {
 			return apiResponse(201, code, false, 'Invalid email format', email, 'email')
 		}
 
@@ -385,39 +397,39 @@ class User {
 		if (getAllErrors) {
 			const requirements = {} as { [any: string]: [boolean, string] }
 
-			if (User.PASSWORD_REQUIREMENTS.minLength && User.PASSWORD_REQUIREMENTS.maxLength) {
+			if (PASSWORD_REQUIREMENTS.minLength && PASSWORD_REQUIREMENTS.maxLength) {
 				requirements.length = [
-					password.length >= User.PASSWORD_REQUIREMENTS.minLength && password.length <= User.PASSWORD_REQUIREMENTS.maxLength,
-					`Password must be between ${User.PASSWORD_REQUIREMENTS.minLength} and ${User.PASSWORD_REQUIREMENTS.maxLength} characters long`
+					password.length >= PASSWORD_REQUIREMENTS.minLength && password.length <= PASSWORD_REQUIREMENTS.maxLength,
+					`Password must be between ${PASSWORD_REQUIREMENTS.minLength} and ${PASSWORD_REQUIREMENTS.maxLength} characters long`
 				]
-			} else if (User.PASSWORD_REQUIREMENTS.minLength) {
+			} else if (PASSWORD_REQUIREMENTS.minLength) {
 				requirements.length = [
-					password.length >= User.PASSWORD_REQUIREMENTS.minLength,
-					`Password must be at least ${User.PASSWORD_REQUIREMENTS.minLength} characters long`
+					password.length >= PASSWORD_REQUIREMENTS.minLength,
+					`Password must be at least ${PASSWORD_REQUIREMENTS.minLength} characters long`
 				]
-			} else if (User.PASSWORD_REQUIREMENTS.maxLength) {
+			} else if (PASSWORD_REQUIREMENTS.maxLength) {
 				requirements.length = [
-					password.length <= User.PASSWORD_REQUIREMENTS.maxLength,
-					`Password must be at most ${User.PASSWORD_REQUIREMENTS.maxLength} characters long`
+					password.length <= PASSWORD_REQUIREMENTS.maxLength,
+					`Password must be at most ${PASSWORD_REQUIREMENTS.maxLength} characters long`
 				]
 			}
 
-			if (User.PASSWORD_REQUIREMENTS.lowercase) {
+			if (PASSWORD_REQUIREMENTS.lowercase) {
 				requirements.hasLowercase = [/[a-z]/.test(password), 'Password must contain at least one lowercase letter']
 			}
 
-			if (User.PASSWORD_REQUIREMENTS.uppercase) {
+			if (PASSWORD_REQUIREMENTS.uppercase) {
 				requirements.hasUppercase = [/[A-Z]/.test(password), 'Password must contain at least one uppercase letter']
 			}
 
-			if (User.PASSWORD_REQUIREMENTS.number) {
+			if (PASSWORD_REQUIREMENTS.number) {
 				requirements.hasNumber = [/[0-9]/.test(password), 'Password must contain at least one number']
 			}
 
-			if (User.PASSWORD_REQUIREMENTS.specialCharacter) {
+			if (PASSWORD_REQUIREMENTS.specialCharacter) {
 				requirements.hasSpecialCharacter = [
-					new RegExp(`[${User.PASSWORD_REQUIREMENTS.characters}]`).test(password),
-					`Password must contain at least one special character (${User.PASSWORD_REQUIREMENTS.characters})`
+					new RegExp(`[${PASSWORD_REQUIREMENTS.characters}]`).test(password),
+					`Password must contain at least one special character (${PASSWORD_REQUIREMENTS.characters})`
 				]
 			}
 
@@ -444,33 +456,33 @@ class User {
 			return apiResponse(200, code, false, msg, null, 'password')
 		}
 
-		if (password.length < User.PASSWORD_REQUIREMENTS.minLength) {
-			const msg = `Password must be at least ${User.PASSWORD_REQUIREMENTS.minLength} characters long`
+		if (password.length < PASSWORD_REQUIREMENTS.minLength) {
+			const msg = `Password must be at least ${PASSWORD_REQUIREMENTS.minLength} characters long`
 			return apiResponse(202, code, false, msg, null, 'password')
 		}
 
-		if (password.length > User.PASSWORD_REQUIREMENTS.maxLength) {
-			const msg = `Password must be at most ${User.PASSWORD_REQUIREMENTS.maxLength} characters long`
+		if (password.length > PASSWORD_REQUIREMENTS.maxLength) {
+			const msg = `Password must be at most ${PASSWORD_REQUIREMENTS.maxLength} characters long`
 			return apiResponse(203, code, false, msg, null, 'password')
 		}
 
-		if (User.PASSWORD_REQUIREMENTS.lowercase && !/[a-z]/.test(password)) {
+		if (PASSWORD_REQUIREMENTS.lowercase && !/[a-z]/.test(password)) {
 			const msg = 'Password must contain at least one lowercase letter'
 			return apiResponse(204, code, false, msg, null, 'password')
 		}
 
-		if (User.PASSWORD_REQUIREMENTS.uppercase && !/[A-Z]/.test(password)) {
+		if (PASSWORD_REQUIREMENTS.uppercase && !/[A-Z]/.test(password)) {
 			const msg = 'Password must contain at least one uppercase letter'
 			return apiResponse(205, code, false, msg, null, 'password')
 		}
 
-		if (User.PASSWORD_REQUIREMENTS.number && !/[0-9]/.test(password)) {
+		if (PASSWORD_REQUIREMENTS.number && !/[0-9]/.test(password)) {
 			const msg = 'Password must contain at least one number'
 			return apiResponse(206, code, false, msg, null, 'password')
 		}
 
-		if (User.PASSWORD_REQUIREMENTS.specialCharacter && !new RegExp(`[${User.PASSWORD_REQUIREMENTS.characters}]`).test(password)) {
-			const msg = `Password must contain at least one special character (${User.PASSWORD_REQUIREMENTS.characters})`
+		if (PASSWORD_REQUIREMENTS.specialCharacter && !new RegExp(`[${PASSWORD_REQUIREMENTS.characters}]`).test(password)) {
+			const msg = `Password must contain at least one special character (${PASSWORD_REQUIREMENTS.characters})`
 			return apiResponse(207, code, false, msg, null, 'password')
 		}
 
@@ -563,19 +575,19 @@ class User {
 	 * @param notes The notes to add to the updateLog.
 	 * @returns The response from the API.
 	 */
-	static async update(id: string, params: Partial<IUserUpdateProps>, notes?: string): Promise<ApiResponse> {
+	static async update(id: string, params: Partial<IUserUpdateParams>, notes?: string): Promise<ApiResponse> {
 		const code = 'user-update'
 
 		const userModel = await UserModel.findById(id)
 		if (!userModel) return apiResponse(200, code, false, 'User not found', id)
 
 		const { username, email, password, confirm, active } = params
-		const changes = {} as Partial<IUserValues>
+		const changes = {} as Partial<IUserUpdate>
 
 		if (username && username !== userModel.username) {
 			// Check if the username was updated within the max update frequency
-			if (this.USER_REQUIERMENTS.maxUpdateFrequency) {
-				let lastUpdate = null
+			if (USER_REQUIERMENTS.maxUpdateFrequency) {
+				let lastUpdate = null as Date | null
 
 				for (let i = userModel.updateLog.length - 1; i >= 0; i--) {
 					const logEntry = userModel.updateLog[i]
@@ -587,8 +599,8 @@ class User {
 
 				if (lastUpdate) {
 					const timeSinceLastUpdate = (new Date().getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24) // in days
-					if (timeSinceLastUpdate < this.USER_REQUIERMENTS.maxUpdateFrequency) {
-						const msg = `Username can only be updated once every ${this.USER_REQUIERMENTS.maxUpdateFrequency} days`
+					if (timeSinceLastUpdate < USER_REQUIERMENTS.maxUpdateFrequency) {
+						const msg = `Username can only be updated once every ${USER_REQUIERMENTS.maxUpdateFrequency} days`
 						return apiResponse(207, code, false, msg, username, 'username')
 					}
 				}

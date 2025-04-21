@@ -30,7 +30,7 @@
 			<nav>
 				<% for (let link of [
 					{ href: '/', text: 'Home' }, 
-					{ href: '/about', text: 'About' }
+					{ href: '/chat', text: 'Chat' }
 				]) { %>
 					<a href='<%= link.href %>'><%= link.text %></a>
 				<% } %>
@@ -43,9 +43,9 @@
 			</nav>
 		<% } %>
 	
-		<% if (params.user) { %>
+		<% if (user) { %>
 			<div id='user-profile'>
-				<span>Hello <strong id='page-header-username'><%= params.user.username %></strong>!</span>
+				<span>Hello <strong id='page-header-username'><%= user.username %></strong>!</span>
 				<div id='profile-options'>
 					<div>
 						<a href='/user-profile'>User Profile</a>

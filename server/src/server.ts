@@ -38,14 +38,14 @@ app.set('view engine', 'ejs')
 app.use('/api', routes)
 
 app.get('/', User.getInfo, (req: Request, res: Response) => {
-	const user = req.body.user
+	const user = req.body.user as User
 	res.render('index', {
 		page: 'Home',
-		params: {
+		props: {
 			title: 'Home Page',
-			user,
 			links: user ? null : [{ text: 'Login', href: '/login' }]
-		}
+		},
+		user: user.getValues()
 	})
 })
 
@@ -54,7 +54,7 @@ app.get('/login', User.getInfo, (req: Request, res: Response) => {
 		? res.redirect('/')
 		: res.render('index', {
 				page: 'Login',
-				params: {
+				props: {
 					title: 'Login',
 					scripts: ['login'],
 					styles: ['forms'],
@@ -68,7 +68,7 @@ app.get('/register', User.getInfo, (req: Request, res: Response) => {
 		? res.redirect('/')
 		: res.render('index', {
 				page: 'Register',
-				params: {
+				props: {
 					title: 'Register',
 					scripts: ['register', 'login'],
 					styles: ['forms'],
@@ -78,8 +78,24 @@ app.get('/register', User.getInfo, (req: Request, res: Response) => {
 })
 
 app.get('/user-profile', User.authenticate, (req: Request, res: Response) => {
-	const user = req.body.user
+	const user = req.body.user as User
 	res.render('index', { page: 'Profile', params: { title: 'User Profile', user, scripts: ['updateProfile'], styles: ['forms'] } })
+})
+
+app.get('/chat', User.authenticate, (req: Request, res: Response) => {
+	const user = req.body.user as User
+	const rooms = req.body.rooms as string[]
+
+	res.render('index', {
+		page: 'Chat',
+		props: {
+			title: 'Chat',
+			scripts: ['chat'],
+			styles: ['chat']
+		},
+		user: user.getValues(),
+		rooms
+	})
 })
 
 // Start the server
