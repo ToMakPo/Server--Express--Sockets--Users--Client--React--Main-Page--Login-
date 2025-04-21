@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+	<meta charset='UTF-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+	<title><%= params.title %></title>
+	<link rel='icon' href='/images/favicon.ico' type='image/x-icon'>
+
+	<script type='module' src='/scripts/header.js' defer></script>
+	<% if (params.scripts) { %>
+		<% for (let script of params.scripts) { %>
+			<script type='module' src='/scripts/<%= script %>.js' defer></script>
+		<% } %>
+	<% } %>
+
+	<link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap'>
+	<link rel='stylesheet' href='https://fonts.googleapis.com/icon?family=Material+Icons'>
+	<link rel='stylesheet' href='/styles/main.css'>
+	<% if (params.styles) { %>
+		<% for (let style of params.styles) { %> 
+			<link rel='stylesheet' href='styles/<%= style %>.css'>
+		<% } %>
+	<% } %>
+</head>
+<body>
+	<header>	
+		<h1><%= params.header || 'Default Header' %></h1>
+		
+		<% if (!params.links) { %>
+			<nav>
+				<% for (let link of [
+					{ href: '/', text: 'Home' }, 
+					{ href: '/about', text: 'About' }
+				]) { %>
+					<a href='<%= link.href %>'><%= link.text %></a>
+				<% } %>
+			</nav>
+		<% } else if (params.links.length) { %>
+			<nav>
+				<% for (let link of params.links) { %>
+					<a href='<%= link.href %>'><%= link.text %></a>
+				<% } %>
+			</nav>
+		<% } %>
+	
+		<% if (params.user) { %>
+			<div id='user-profile'>
+				<span>Hello <strong id='page-header-username'><%= params.user.username %></strong>!</span>
+				<div id='profile-options'>
+					<div>
+						<a href='/user-profile'>User Profile</a>
+						<hr>
+						<button id='logout-button'>Logout</button>
+					</div>
+				</div>
+			</div>
+		<% } %>
+	</header>
+
+	<main>
+		<%- include(`./pages/${page}.ejs`) %>
+	</main>
+</body>
+</html>

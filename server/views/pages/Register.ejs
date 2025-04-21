@@ -1,0 +1,28 @@
+<form id='register-form' action='' method='POST'>
+	<h2>Register</h2>
+
+	<div id='username-group' class='input-group'>
+		<label for='username-input'>Username</label>
+		<input id='username-input' type='text' name='username' autocomplete='username' autofocus>
+		<span class='icon msg-icon' tabindex='0'></span>
+		<dialog class='message'></dialog>
+	</div>
+
+	<div id='email-group' class='input-group'>
+		<label for='email-input'>Email</label>
+		<input id='email-input' type='email' name='email' autocomplete='email'>
+		<span class='icon msg-icon' tabindex='0'></span>
+		<dialog class='message'></dialog>
+	</div>
+
+	<div id='password-group' class='input-group'>
+		<label for='password-input'>Password</label>
+		<input id='password-input' type='password' name='password' autocomplete='new-password'>
+		<input id='confirm-password-input' type='password' name='confirmPassword' autocomplete='new-password'>
+		<span class='icon msg-icon' tabindex='0'></span>
+		<dialog class='message'></dialog>
+	</div>
+
+	<input type='submit' value='Submit'>
+	<a href='#' onclick='window.location.href = "/login"'>Already have an account? Login</a>
+</form>

@@ -1,0 +1,173 @@
+:root {
+	--msg-icon-size: 20px;
+	--msg-border-color: #666666;
+	--msg-border-width: 3px;
+	--msg-border-style: solid;
+	--msg-border-radius: 8px;
+	--msg-background-color: #f9f9f9;
+	--msg-success-color: forestgreen;
+	--msg-failure-color: firebrick;
+}
+
+form {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+}
+
+form h4 {
+	margin: 0 0 5px;
+	font-size: 1.1em;
+	color: #333;
+}
+
+form input:is([type='text'], [type='password'], [type='email']) {
+	width: 300px;
+	height: 40px;
+	padding: 0 10px;
+	border: 1px solid #ccc;
+	border-radius: 5px;
+	font-size: 1rem;
+}
+
+form input:is([type='submit'], [type='button']) {
+	width: 300px;
+	height: 40px;
+	background-color: #007bff;
+	color: white;
+	border: none;
+	border-radius: 5px;
+	cursor: pointer;
+}
+
+form input[name^='delete'] {
+	background-color: #dc3545; /* Red color for delete button */
+}
+
+form a {
+	color: #007bff;
+	text-decoration: none;
+}
+
+form a:hover {
+	text-decoration: underline;
+}
+
+form a:active {
+	color: #0056b3;
+}
+
+form div[id*='check-msg'] {
+	font-size: x-small;
+	margin: -3px 10px;
+}
+form div[id*='check-msg'] p {
+	margin: 0;
+	padding: 0;
+}
+form .input-group {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 5px;
+	width: min-content;
+	position: relative;
+	box-sizing: border-box;
+}
+
+/************************************/
+/** MESSAGE ICON AND DIALOG STYLES **/
+/************************************/
+form .input-group .msg-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	position: absolute;
+	right: 0;
+	top: 0;
+	cursor: pointer;
+	border-width: var(--msg-border-width);
+	border-style: var(--msg-border-style);
+	border-color: transparent;
+	border-bottom: none;
+	border-radius: var(--msg-border-radius) var(--msg-border-radius) 0 0;
+	-webkit-user-select: none;
+	user-select: none;
+	outline: none;
+}
+form .input-group:has(dialog:empty) .msg-icon {
+	display: none;
+}
+
+form .input-group .msg-icon.show,
+form .input-group:has(dialog:hover) .msg-icon,
+form .input-group .msg-icon:is(:hover, :focus) {
+	border-color: var(--msg-border-color);
+	background-color: var(--msg-background-color);
+	z-index: 100;
+}
+
+form .input-group .msg-icon.show::after,
+form .input-group:has(dialog:hover) .msg-icon::after,
+form .input-group .msg-icon:is(:hover, :focus)::after {
+	content: '';
+	position: absolute;
+	background-color: transparent;
+	top: calc(var(--msg-icon-size) / 2 - var(--msg-border-width));
+	right: var(--msg-icon-size);
+	width: var(--msg-icon-size);
+	height: calc(var(--msg-icon-size) / 2);
+	border-bottom-right-radius: var(--msg-border-radius);
+	z-index: -1;
+	box-shadow: calc(var(--msg-icon-size) / 2) 0 0 0 var(--msg-background-color);
+	border: var(--msg-border-width) var(--msg-border-style) var(--msg-border-color);
+	border-top: none;
+	border-left: none;
+}
+
+form .input-group:has(.msg-icon.show) dialog,
+form .input-group dialog:hover,
+form .input-group:has(.msg-icon:is(:hover, :focus)) dialog {
+	display: flex;
+	flex-direction: column;
+	position: absolute;
+	top: var(--msg-icon-size);
+	width: 100%;
+	box-sizing: border-box;
+	background-color: var(--msg-background-color);
+	border: var(--msg-border-width) var(--msg-border-style) var(--msg-border-color);
+	border-radius: var(--msg-border-radius);
+	border-top-right-radius: 0;
+	padding: 10px;
+	z-index: 99;
+}
+
+form .input-group dialog p {
+	display: flex;
+	align-items: center;
+	justify-content: stretch;
+	gap: 5px;
+	margin: 0;
+	padding: 0;
+	font-size: small;
+}
+form .input-group dialog p:not(:last-child) {
+	border-bottom: 1px dotted #ccc;
+	--buffer: 2px;
+	padding-bottom: var(--buffer);
+	margin-bottom: var(--buffer);
+}
+form .input-group dialog p .icon {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 3px;
+}
+form .input-group dialog p .icon::after {
+content: ' - ';
+	display: inline-block;
+}

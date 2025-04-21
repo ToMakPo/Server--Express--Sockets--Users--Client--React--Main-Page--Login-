@@ -1,0 +1,20 @@
+<form id='login-form' action='/api/users/login' method='POST'>
+	<h2>Login</h2>
+
+	<div id='credentials-group' class='input-group'>
+		<label for='credentials-input'>Username or Email</label>
+		<input id='credentials-input' type='text' name='credentials' autocomplete='username' autofocus>
+		<span class='icon msg-icon' tabindex='0'></span>
+		<dialog class='message'></dialog>
+	</div>
+
+	<div id='password-group' class='input-group'>
+		<label for='password-input'>Password</label>
+		<input id='password-input' type='password' name='password' autocomplete='current-password'>
+		<span class='icon msg-icon' tabindex='0'></span>
+		<dialog class='message'></dialog>
+	</div>
+
+	<input type='submit' value='Submit'>
+	<a href='#' onclick='window.location.href = "/register"'>Don't have an account? Register</a>
+</form>

@@ -1,0 +1,112 @@
+
+body {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	font-family: 'quicksand', sans-serif;
+	background-color: #f0f2f5;
+	margin: 0;
+	padding: 0;
+	height: 100vh;
+	box-sizing: border-box;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	margin: 0;
+	padding: 0;
+}
+
+.icon {
+	font-family: 'Material Icons';
+}
+
+header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	background-color: #b3bdcc;
+	padding: 10px 20px;
+	gap: 10px;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+header nav {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 20px;
+}
+
+header nav a {
+	text-decoration: none;
+	color: #333;
+	font-weight: bold;
+}
+
+/* Profile Options */
+#user-profile {
+	position: relative;
+}
+
+#page-header-username {
+	cursor: pointer;
+}
+
+#profile-options {
+	display: none;
+	position: absolute;
+	top: 100%;
+	right: 0;
+}
+
+#profile-options > div {
+	display: flex;
+	flex-direction: column;
+	margin: 10px 0 0 0;
+	background-color: #dddddd;
+	padding: 10px;
+	border: 1px solid;
+	border-radius: 5px;
+	gap: 5px;
+	min-width: 200px;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+#user-profile:has(#page-header-username:is(:hover, :focus)) #profile-options,
+#profile-options:is(:hover, :focus, .show) {
+	display: flex;
+}
+
+main {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	max-width: 960px;
+	padding: 20px;
+	margin: auto;
+	box-sizing: border-box;
+	position: relative;
+}
+
+button {
+	padding: 10px 20px;
+	background-color: #007bff;
+	color: white;
+	border: none;
+	border-radius: 5px;
+	cursor: pointer;
+}
+
+button:hover {
+	background-color: #0056b3;
+}
+
+button:active {
+	background-color: #004085;
+}
+
+.prompt-text {
+	font-size: 1.1rem;
+	text-wrap: pretty;
+}

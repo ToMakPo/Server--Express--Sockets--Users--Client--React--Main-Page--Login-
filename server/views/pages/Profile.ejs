@@ -1,0 +1,183 @@
+<h2>User Profile</h2>
+
+<section id='account-section'>
+	<h3>Account</h3>
+
+	<!-- USERNAME -->
+	<div id='username-option' class='profile-option'>
+		<h4>Username</h4>
+		<span class="value"><%= params.user.username %></span>	
+	</div>
+
+	<dialog id='update-username-modal' class='modal'>
+		<form id='update-username-form' action='/api/users/update' method='POST'>
+			<h2>Update Username</h2>
+			<span class='icon close-button'>close</span>
+
+			<div id='new-username-group' class='input-group'>
+				<label for='new-username-input'>New Username</label>
+				<input id='new-username-input' type='text' name='newUsername' autocomplete='username' autofocus>
+				<span class='icon msg-icon' tabindex='0'></span>
+				<dialog class='message'></dialog>
+			</div>
+
+			<div id='update-username-password-group' class='input-group'>
+				<label for='update-username-password-input'>Current Password</label>
+				<input id='update-username-password-input' type='password' name='password' autocomplete='current-password'>
+				<span style='font-size: small; white-space: wrap;'>To update your username, please enter your current password.</span>
+				<span class='icon msg-icon' tabindex='0'></span>
+				<dialog class='message'></dialog>
+			</div>
+
+			<input type='submit' value='Update Username'>
+		</form>
+	</dialog>
+
+	<!-- EMAIL -->
+	<div id='email-option' class='profile-option'>
+		<h4>Email Address</h4>
+		<span class="value"><%= params.user.email %></span>
+	</div>
+
+	<dialog id='update-email-modal' class='modal'>
+		<form id='update-email-form' action='/api/users/update' method='POST'>
+			<h2>Update Email</h2>
+			<span class='icon close-button'>close</span>
+
+			<div id='new-email-group' class='input-group'>
+				<label for='new-email-input'>New Email</label>
+				<input id='new-email-input' type='email' name='newEmail' autocomplete='email' autofocus>
+				<span class='icon msg-icon' tabindex='0'></span>
+				<dialog class='message'></dialog>
+			</div>
+
+			<div id='update-email-password-group' class='input-group'>
+				<label for='update-email-password-input'>Current Password</label>
+				<input id='update-email-password-input' type='password' name='password' autocomplete='current-password'>
+				<span style='font-size: small; white-space: wrap;'>To update your email, please enter your current password.</span>
+				<span class='icon msg-icon' tabindex='0'></span>
+				<dialog class='message'></dialog>
+			</div>
+
+			<input type='submit' value='Update Email'>
+		</form>
+	</dialog>
+
+	<!-- PASSWORD -->
+	<div id='password-option' class='profile-option'>
+		<h4>Password</h4>
+		<span class="value">**********</span>
+	</div>
+
+	<dialog id='update-password-modal' class='modal'>
+		<form id='update-password-form' action='/api/users/update' method='POST'>
+			<h2>Update Password</h2>
+			<span class='icon close-button'>close</span>
+
+			<div id='new-password-group' class='input-group'>
+				<label for='new-password-input'>New Password</label>
+				<input id='new-password-input' type='password' name='newPassword' autocomplete='new-password'>
+				<input id='confirm-new-password-input' type='password' name='confirmNewPassword' autocomplete='new-password' 
+					placeholder='Confirm New Password'>
+				<span class='icon msg-icon' tabindex='0'></span>
+				<dialog class='message'></dialog>
+			</div>
+
+			<div id='update-password-password-group' class='input-group'>
+				<label for='update-password-password-input'>Current Password</label>
+				<input id='update-password-password-input' type='password' name='currentPassword' autocomplete='current-password'>
+				<span style='font-size: small; white-space: wrap;'>To update your password, please enter your current password.</span>
+				<span class='icon msg-icon' tabindex='0'></span>
+				<dialog class='message'></dialog>
+			</div>
+
+			<input type='submit' value='Update Password'>
+		</form>
+	</dialog>
+
+	<!-- DELETE ACCOUNT -->
+	<div class='profile-actions'>
+		<button id='delete-account-button' title='Delete Account' class='icon'>delete</button>
+	</div>
+
+	<dialog id='delete-account-modal' class='modal'>
+		<form id='delete-account-form' action='/api/users/delete' method='POST'>
+			<h2>Delete Account</h2>
+			<span class='icon close-button'>close</span>
+
+			<p style="width: 322px;" class="prompt-text">Are you sure you want to delete your account? This action cannot be undone.</p>
+
+			<div id='delete-account-password-group' class='input-group'>
+				<label for='delete-account-password-input'>Current Password</label>
+				<input id='delete-account-password-input' type='password' name='password' autocomplete='current-password'>
+				<span style='font-size: small; white-space: wrap;'>To delete your account, please enter your current password.</span>
+				<span class='icon msg-icon' tabindex='0'></span>
+				<dialog class='message'></dialog>
+			</div>
+
+			<input type='submit' value='Delete Account'>
+		</form>
+	</dialog>
+</section>
+
+<style>
+	section {
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+	}
+	.profile-option {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 5px 10px;
+		border-radius: 5px;
+	}
+	.profile-option:hover {
+		background-color: #d8d8d8;
+		cursor: pointer;
+	}
+
+	.profile-actions {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		padding: 5px 10px;
+		border-radius: 5px;
+	}
+	#delete-account-button {
+		background-color: #ff4d4d;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		width: 30px;
+		height: 30px;
+		font-size: 1.2rem;
+		color: white;
+		border: none;
+		border-radius: 5px;
+		cursor: pointer;
+	}
+
+	select {
+		padding: 5px;
+		border-radius: 5px;
+		border: 1px solid #ccc;
+		background-color: white;
+	}
+
+	dialog:modal {
+		position: relative;
+	}
+
+	dialog:modal .close-button {
+		position: absolute;
+		top: 10px;
+		right: 10px;
+		cursor: pointer;
+		font-size: 1.5rem;
+		color: #333;
+		user-select: none;
+	}
+</style>
