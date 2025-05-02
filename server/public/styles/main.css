@@ -1,10 +1,51 @@
+:root {
+	color-scheme: light dark;
+	
+	--background-color: light-dark(#f0f0f0, #1a1a1a);
+	--header-background-color: light-dark(#b3bdcc, #222935);
+	--popup-background-color: light-dark(#dddddd, #333333);
+	--option-background-color: light-dark(#ffffff, #333333);
+
+	--foreground-color: light-dark(#333, #ddd);
+
+	--standard-button-color: light-dark(#007bff, #0056b3);
+	--standard-button-hover-color: light-dark(#0056b3, #004085);
+	--standard-button-active-color: light-dark(#004085, #003366);
+	--standard-button-text-color: light-dark(#cce5ff, #cce5ff);
+
+	--confirm-button-color: light-dark(#28a745, #218838);
+	--confirm-button-hover-color: light-dark(#218838, #1e7e34);
+	--confirm-button-active-color: light-dark(#1e7e34, #155724);
+	--confirm-button-text-color: light-dark(#b1ecbf, #b1ecbf);
+
+	--cancel-button-color: light-dark(#c0c0c0, #a5a5a5);
+	--cancel-button-hover-color: light-dark(#a5a5a5, #8c8c8c);
+	--cancel-button-active-color: light-dark(#8c8c8c, #737373);
+	--cancel-button-text-color: light-dark(#333, #ddd);
+
+	--warning-button-color: light-dark(#ac3333, #a52a2a);
+	--warning-button-hover-color: light-dark(#a52a2a, #8b0000);
+	--warning-button-active-color: light-dark(#8b0000, #800000);
+	--warning-button-text-color: light-dark(#f8d7da, #f8d7da);
+}
+:root:has([data-theme='system']) {
+	color-scheme: light dark;
+}
+:root:has([data-theme='light']) {
+	color-scheme: light;
+}
+:root:has([data-theme='dark']) {
+	color-scheme: dark;
+}
+
 
 body {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	font-family: 'quicksand', sans-serif;
-	background-color: #f0f2f5;
+	background-color: var(--background-color);
+	color: var(--foreground-color);
 	margin: 0;
 	padding: 0;
 	height: 100vh;
@@ -12,6 +53,9 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
+	display: flex;
+	align-content: center;
+	gap: 10px;
 	margin: 0;
 	padding: 0;
 }
@@ -24,7 +68,7 @@ header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	background-color: #b3bdcc;
+	background-color: var(--header-background-color);
 	padding: 10px 20px;
 	gap: 10px;
 	width: 100%;
@@ -40,7 +84,7 @@ header nav {
 
 header nav a {
 	text-decoration: none;
-	color: #333;
+	color: inherit;
 	font-weight: bold;
 }
 
@@ -64,7 +108,7 @@ header nav a {
 	display: flex;
 	flex-direction: column;
 	margin: 10px 0 0 0;
-	background-color: #dddddd;
+	background-color: var(--popup-background-color);
 	padding: 10px;
 	border: 1px solid;
 	border-radius: 5px;
@@ -84,26 +128,61 @@ main {
 	width: 100%;
 	max-width: 960px;
 	padding: 20px;
-	margin: auto;
+	margin: 0 auto;
 	box-sizing: border-box;
 	position: relative;
+	flex: 1 1 auto;
 }
 
 button {
 	padding: 10px 20px;
-	background-color: #007bff;
-	color: white;
 	border: none;
 	border-radius: 5px;
 	cursor: pointer;
 }
 
+button {
+	background-color: var(--standard-button-color);
+	color: var(--standard-button-text-color);
+}
 button:hover {
-	background-color: #0056b3;
+	background-color: var(--standard-button-hover-color);
+}
+button:active {
+	background-color: var(--standard-button-active-color);
 }
 
-button:active {
-	background-color: #004085;
+button.confirm {
+	background-color: var(--confirm-button-color);
+	color: var(--confirm-button-text-color);
+}
+button.confirm:hover {
+	background-color: var(--confirm-button-hover-color);
+}
+button.confirm:active {
+	background-color: var(--confirm-button-active-color);
+}
+
+button.cancel {
+	background-color: var(--cancel-button-color);
+	color: var(--cancel-button-text-color);
+}
+button.cancel:hover {
+	background-color: var(--cancel-button-hover-color);
+}
+button.cancel:active {
+	background-color: var(--cancel-button-active-color);
+}
+
+button.warning {
+	background-color: var(--warning-button-color);
+	color: var(--warning-button-text-color);
+}
+button.warning:hover {
+	background-color: var(--warning-button-hover-color);
+}
+button.warning:active {
+	background-color: var(--warning-button-active-color);
 }
 
 .prompt-text {

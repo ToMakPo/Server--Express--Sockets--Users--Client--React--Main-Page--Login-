@@ -48,7 +48,7 @@ async function updateUsername(newUsername, password) {
 	const response = await fetch('/api/users/update', {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ newUsername, password, notes: 'username updated' })
+		body: JSON.stringify({ params: { username: newUsername }, password, notes: 'Username updated' })
 	}).then(response => response.json())
 
 	if (response.passed) {
@@ -119,7 +119,7 @@ async function updateEmail(newEmail, password) {
 	const response = await fetch('/api/users/update', {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ newEmail, password, notes: 'email updated' })
+		body: JSON.stringify({ params: { email: newEmail }, password, notes: 'Email updated' })
 	}).then(response => response.json())
 
 	if (response.passed) {
@@ -174,23 +174,23 @@ document.querySelector('#update-password-form')?.addEventListener('submit', func
 	event.preventDefault()
 
 	const newPassword = this.querySelector('#new-password-input').value
-	const confirmPassword = this.querySelector('#confirm-new-password-input').value
+	const confirm = this.querySelector('#confirm-new-password-input').value
 	const password = this.querySelector('#update-password-password-input').value
 
-	updatePassword(newPassword, confirmPassword, password)
+	updatePassword(newPassword, confirm, password)
 })
 
 /** Attempts to update the password. If the update is successful, the modal is closed and the password is updated.
  * 
  * @param {string} newPassword - The new password to update.
- * @param {string} confirmPassword - The confirmation password.
+ * @param {string} confirm - The confirmation of the new password.
  * @param {string} password - The current password of the user.
  */
-async function updatePassword(newPassword, confirmPassword, password) {
+async function updatePassword(newPassword, confirm, password) {
 	const response = await fetch('/api/users/update', {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ newPassword, confirmPassword, password, notes: 'password updated' })
+		body: JSON.stringify({ params: { password: newPassword, confirm: confirm }, password, notes: 'Password updated' })
 	}).then(response => response.json())
 
 	if (response.passed) {
@@ -276,3 +276,28 @@ async function deleteAccount(password) {
 		// TODO: Show error toast message indicating that the account deletion failed.
 	}
 }
+
+
+////////////////////
+/// UPDATE THEME ///
+////////////////////
+const updateDropdown = document.querySelector('#theme-select')
+updateDropdown?.addEventListener('change', async function() {
+	const theme = this.value
+	
+	const response = await fetch('/api/users/update', {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ params: { preferences: { theme } }, notes: 'Theme updated' })
+	}).then(response => response.json())
+
+	console.log(response)
+
+	if (response.passed) {
+		// TODO: Show success toast message indicating that the theme was updated successfully.
+		// TODO: Update the theme in the UI.
+		document.body.setAttribute('data-theme', theme)
+		console.log(`Theme updated to ${theme}`)
+	}
+})
+

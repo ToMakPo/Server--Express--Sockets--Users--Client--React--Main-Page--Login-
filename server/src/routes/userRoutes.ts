@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import User, { IUserUpdateParams } from '../models/User'
+import User, { IUser, IUserCreate, IUserUpdateParams, Status } from '../models/User'
 import { response as apiResponse } from '../lib/response'
 
 const userRouter = Router()
@@ -9,12 +9,10 @@ userRouter.get('/check-username', async (req, res) => {
 	const username = req.query.username as string
 	let ignoreId = req.query.ignoreId as string | undefined
 
-	const token = User.getToken(req)
-	const user = await User.findByToken(token)
-	if (token) {
-		if (user && ignoreId === undefined) {
-			ignoreId = user.getId()
-		}
+	if (ignoreId === undefined) {
+		const token = User.getToken(req)
+		const user = await User.findByToken(token)
+		if (user) ignoreId = user.id
 	}
 
 	const response = await User.checkUsername(username, ignoreId)
@@ -25,7 +23,13 @@ userRouter.get('/check-username', async (req, res) => {
 // Check email
 userRouter.get('/check-email', async (req, res) => {
 	const email = req.query.email as string
-	const ignoreId = req.query.ignoreId as string | undefined
+	let ignoreId = req.query.ignoreId as string | undefined
+
+	if (ignoreId === undefined) {
+		const token = User.getToken(req)
+		const user = await User.findByToken(token)
+		if (user) ignoreId = user.id
+	}
 
 	const response = await User.checkEmail(email, ignoreId)
 
@@ -53,33 +57,20 @@ userRouter.put('/update', User.getInfo, async (req, res) => {
 		return
 	}
 
-	const id = user.getId()
-	const newUsername = req.body.newUsername as string | undefined
-	const newEmail = req.body.newEmail as string | undefined
-	const newPassword = req.body.newPassword as string | undefined
-	const newConfirm = req.body.newConfirm as string | undefined
-	const password = (req.body.password as string | undefined) || ''
-	const notes = (req.body.notes as string | undefined) || 'Updated user'
+	const params = {
+		username: req.body.params.username as string | undefined,
+		email: req.body.params.email as string | undefined,
+		password: req.body.params.password as string | undefined,
+		confirm: req.body.params.confirm as string | undefined,
+		status: req.body.params.status as Status | undefined,
+		preferences: req.body.params.preferences as Partial<IUser['preferences']> | undefined,
+		active: req.body.params.active as boolean | undefined,
+	} as IUserUpdateParams
+	const password = req.body.password as string | undefined
+	const notes = req.body.notes as string | undefined
 
-	const params = {} as IUserUpdateParams
-
-	if (newUsername !== undefined && newUsername !== user.getUsername()) params.username = newUsername
-	if (newEmail !== undefined && newEmail !== user.getEmail()) params.email = newEmail
-	if (newPassword !== undefined) params.password = newPassword
-	if (newConfirm !== undefined) params.confirm = newConfirm
-
-	const requirePassword = ['username', 'email', 'password'].some(key => key in params)
-
-	// Validate the current password before updating the user
-	if (requirePassword && (!password || !user.confirmPassword(password))) {
-		res.json(
-			apiResponse(201, code, false, 'You must provide the current password when updating your account.', {}, 'currentPassword')
-		)
-		return
-	}
-
-	const response = await User.update(id, params, notes)
-
+	// Attempt to update the user.
+	const response = await user.update(params, password, notes)
 	res.json(response)
 })
 
@@ -93,64 +84,52 @@ userRouter.delete('/delete', User.getInfo, async (req, res) => {
 		return
 	}
 
-	const id = user.getId()
-	const password = (req.body.password as string | undefined) || ''
-	const notes = (req.body.notes as string | undefined) || 'user deleted'
+	const password = (req.body.password as string | undefined) ?? ''
+	const force = req.body.force as boolean | undefined
+	const notes = req.body.notes as string | undefined
 
-	const requirePassword = true
-
-	// Validate the current password before updating the user
-	if (requirePassword && (!password || !user.confirmPassword(password))) {
-		res.json(
-			apiResponse(201, code, false, 'You must provide the current password when updating your account.', {}, 'currentPassword')
-		)
-		return
-	}
-
-	const response = await User.delete(id, notes)
-
+	const response = await user.delete(password, force, notes)
 	res.json(response)
 })
 
 // Register a new user
 userRouter.post('/register', async (req, res) => {
-	const username = (req.body.username as string | undefined) ?? ''
-	const email = (req.body.email as string | undefined) ?? ''
-	const password = (req.body.password as string | undefined) ?? ''
-	const confirm = (req.body.confirm as string | undefined) ?? ''
+	const params = {
+		username: req.body.params.username as string | undefined,
+		email: req.body.params.email as string | undefined,
+		password: req.body.params.password as string | undefined,
+		confirm: req.body.params.confirm as string | undefined,
+		status: req.body.params.status as Status | undefined,
+		preferences: req.body.params.preferences as Partial<IUser['preferences']> | undefined,
+		active: req.body.params.active as boolean | undefined
+	} as IUserCreate
+	const notes = req.body.notes as string | undefined
 
-	const registerResponse = await User.create(username, email, password, confirm)
-
-	res.json(registerResponse)
+	const response = await User.create(params, notes)
+	res.json(response)
 })
 
 // User login
-/**
- * This function handles user login.
- *
- * @param credentials Username or email of the user
- * @param password Password of the user
- */
 userRouter.post('/login', async (req, res) => {
-	const { credentials, password } = req.body
+	const credentials = (req.body.credentials as string | undefined) ?? ''
+	const password = (req.body.password as string | undefined) ?? ''
 
 	const response = await User.login(credentials, password)
-
 	if (response.passed) {
-		res.cookie('token', response.data.token, { httpOnly: true, secure: true, sameSite: 'strict' })
-	} else {
-		res.clearCookie('token')
+		const { user, token } = response.data
+		res.cookie('token', token)
+		response.data = { user }
 	}
-
 	res.json(response)
 })
 
 // User logout
 userRouter.post('/logout', User.getInfo, async (req, res) => {
 	const code = 'api-user-logout'
-	if (req.body.user) {
-		const userId = req.body.user.id
-		await User.logout(userId)
+
+	const user = req.body.user as User
+	if (user) {
+		await user.logout()
 	}
 
 	res.clearCookie('token')

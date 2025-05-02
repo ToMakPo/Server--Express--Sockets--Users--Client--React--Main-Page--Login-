@@ -4,7 +4,15 @@
 	<meta charset='UTF-8'>
 	<meta name='viewport' content='width=device-width, initial-scale=1.0'>
 	<title><%= params.title %></title>
-	<link rel='icon' href='/images/favicon.ico' type='image/x-icon'>
+
+	<!-- Default favicon (for browsers that don't support media queries in link tags) -->
+	<link rel="icon" href="/images/logo.dark.svg" type="image/svg+xml">
+
+	<!-- Light mode favicon -->
+	<link rel="icon" href="/images/logo.dark.svg" type="image/svg+xml" media="(prefers-color-scheme: light)">
+	
+	<!-- Dark mode favicon -->
+	<link rel="icon" href="/images/logo.light.svg" type="image/svg+xml" media="(prefers-color-scheme: dark)">
 
 	<script type='module' src='/scripts/header.js' defer></script>
 	<% if (params.scripts) { %>
@@ -22,9 +30,28 @@
 		<% } %>
 	<% } %>
 </head>
-<body>
-	<header>	
-		<h1><%= params.header || 'Default Header' %></h1>
+<body data-theme="<%= user?.preferences?.theme ?? 'system' %>">
+	<header>
+		<h1>
+			<picture id='logo' style="height: 40px">
+				<source 
+					srcset='/images/logo.dark.svg' 
+					type='image/svg+xml'
+					media='(prefers-color-scheme: light)'
+				/>
+				<source 
+					srcset='/images/logo.light.svg' 
+					type='image/svg+xml'
+					media='(prefers-color-scheme: dark)'
+				/>
+				<img 
+					src='/images/faveicon.ico'
+					alt='Logo'
+					height="100%"
+				/>
+			</picture>
+			<%= params.header ?? params.title %>
+		</h1>
 		
 		<% if (!params.links) { %>
 			<nav>

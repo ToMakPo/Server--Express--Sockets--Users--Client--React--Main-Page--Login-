@@ -1,0 +1,29 @@
+<aside id="chat-rooms-aside">
+	<h2>Chat Rooms</h2>
+	
+	<div class="search-bar">
+		<span class="icon search-icon">search</span>
+		<input type="text" id="search-chat-rooms" placeholder="Search messages...">
+	</div>
+
+	<ul class="chat-rooms-list">
+		<% chatRooms.forEach((room) => { %>
+			<li class="chat-room" data-room-id="<%= room.id %>">
+				<a href="/chat/<%= room.id %>">
+					<span class="room-icon"><%= room.icon %></span>
+					<span class="room-name"><%= room.name %></span>
+					<span class="last-message"><%= room.lastMessage %></span>
+				</a>
+			</li>
+		<% }) %>
+	</ul>
+</aside>
+
+<section id="chat-window">
+	<div class="chat-header">
+		<h2>
+			<span class="room-icon"><%= currentRoom.icon %></span>
+			<span class="room-name"><%= currentRoom.name %></span>
+		</h2>
+		<div class="chat-controls">
+			<span id="options-button" class="icon options-icon">menu</span>

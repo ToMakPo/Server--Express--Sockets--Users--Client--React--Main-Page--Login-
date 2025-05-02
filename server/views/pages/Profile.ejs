@@ -97,7 +97,7 @@
 
 	<!-- DELETE ACCOUNT -->
 	<div class='profile-actions'>
-		<button id='delete-account-button' title='Delete Account' class='icon'>delete</button>
+		<button id='delete-account-button' title='Delete Account' class='icon warning'>delete</button>
 	</div>
 
 	<dialog id='delete-account-modal' class='modal'>
@@ -120,6 +120,20 @@
 	</dialog>
 </section>
 
+<section id='preferences-section'>
+	<h3>Preferences</h3>
+
+	<!-- THEME -->
+	<div id='theme-option' class='profile-option'>
+		<h4>Theme</h4>
+		<select id='theme-select' name='theme'>
+			<option value='light' <%= user.preferences.theme === 'light' ? 'selected' : '' %>>Light</option>
+			<option value='dark' <%= user.preferences.theme === 'dark' ? 'selected' : '' %>>Dark</option>
+			<option value='system' <%= user.preferences.theme === 'system' ? 'selected' : '' %>>System</option>
+		</select>
+	</div>
+</section>
+
 <style>
 	section {
 		display: flex;
@@ -134,7 +148,7 @@
 		border-radius: 5px;
 	}
 	.profile-option:hover {
-		background-color: #d8d8d8;
+		background-color: var(--option-background-color);
 		cursor: pointer;
 	}
 
@@ -146,7 +160,6 @@
 		border-radius: 5px;
 	}
 	#delete-account-button {
-		background-color: #ff4d4d;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -154,7 +167,6 @@
 		width: 30px;
 		height: 30px;
 		font-size: 1.2rem;
-		color: white;
 		border: none;
 		border-radius: 5px;
 		cursor: pointer;
@@ -163,8 +175,8 @@
 	select {
 		padding: 5px;
 		border-radius: 5px;
-		border: 1px solid #ccc;
-		background-color: white;
+		border: 1px solid;
+		background-color: var(--option-background-color);
 	}
 
 	dialog:modal {

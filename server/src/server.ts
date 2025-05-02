@@ -39,13 +39,14 @@ app.use('/api', routes)
 
 app.get('/', User.getInfo, (req: Request, res: Response) => {
 	const user = req.body.user as User
+
 	res.render('index', {
 		page: 'Home',
-		props: {
+		params: {
 			title: 'Home Page',
 			links: user ? null : [{ text: 'Login', href: '/login' }]
 		},
-		user: user.getValues()
+		user: user?.values 
 	})
 })
 
@@ -53,48 +54,60 @@ app.get('/login', User.getInfo, (req: Request, res: Response) => {
 	return req.body.user
 		? res.redirect('/')
 		: res.render('index', {
-				page: 'Login',
-				props: {
-					title: 'Login',
-					scripts: ['login'],
-					styles: ['forms'],
-					links: [{ text: 'Home', href: '/' }]
-				}
-			})
+			page: 'Login',
+			params: {
+				title: 'Login',
+				scripts: ['login'],
+				styles: ['forms'],
+				links: [{ text: 'Home', href: '/' }]
+			},
+			user: null
+		})
 })
 
 app.get('/register', User.getInfo, (req: Request, res: Response) => {
 	return req.body.user
 		? res.redirect('/')
 		: res.render('index', {
-				page: 'Register',
-				props: {
-					title: 'Register',
-					scripts: ['register', 'login'],
-					styles: ['forms'],
-					links: [{ text: 'Home', href: '/' }]
-				}
-			})
+			page: 'Register',
+			params: {
+				title: 'Register',
+				scripts: ['register', 'login'],
+				styles: ['forms'],
+				links: [{ text: 'Home', href: '/' }]
+			},
+			user: null
+		})
 })
 
 app.get('/user-profile', User.authenticate, (req: Request, res: Response) => {
 	const user = req.body.user as User
-	res.render('index', { page: 'Profile', params: { title: 'User Profile', user, scripts: ['updateProfile'], styles: ['forms'] } })
+
+	res.render('index', { 
+		page: 'Profile', 
+		params: { 
+			title: 'User Profile', 
+			header: ' ',
+			scripts: ['updateProfile'], 
+			styles: ['forms']
+		},
+		user: user.values
+	})
 })
 
 app.get('/chat', User.authenticate, (req: Request, res: Response) => {
 	const user = req.body.user as User
-	const rooms = req.body.rooms as string[]
+	const chatRooms = req.body.chatRooms as string[]
 
 	res.render('index', {
 		page: 'Chat',
-		props: {
+		params: {
 			title: 'Chat',
 			scripts: ['chat'],
 			styles: ['chat']
 		},
-		user: user.getValues(),
-		rooms
+		user: user.values,
+		chatRooms
 	})
 })
 
